@@ -20,7 +20,8 @@ class FormulaMarcada:
 
       return cmp
 
-# teste
+# TEST ===================================================
+
 # P, Q, R = vars("P", "Q", "R")
 
 # f1 = FormulaMarcada("T", P)
@@ -31,6 +32,8 @@ class FormulaMarcada:
 # print("f1 == f3: ", f1.eh_igual(f3))
 # print("f1: ", f1)
 # print("f2: ", f2)
+
+# ========================================================
 
 class Ramo:
   def __init__ (self):
@@ -81,7 +84,8 @@ class Ramo:
 
     return False
 
-# test
+# TEST ===================================================
+
 # P, Q, R = vars("P", "Q", "R")
 
 # r = Ramo()
@@ -102,5 +106,114 @@ class Ramo:
 # r_dir.adicionar(f_dir)
 
 # print(r_esq.fechado, r_dir.fechado, r_dir.atomos)
+
+# ========================================================
+
+
+def expandir_formula(fm):
+  sinal = fm.sinal
+  f = fm.formula
+
+  # regras de expansçao do tableaux:
+  # +---------+----------+-----------+----------------------+----------------------+
+  # | Grupo   | Regra    | Fórmula   | Resultado            | Efeito no tableau    |
+  # +---------+----------+-----------+----------------------+----------------------+
+  # | alpha   | alpha_^  | T (C & B) | T C, T B             | Mesmo ramo           |
+  # | alpha   | alpha_v  | F (C | B) | F C, F B             | Mesmo ramo           |
+  # | alpha   | alpha_>> | F (C >>B) | T C, F B             | Mesmo ramo           |
+  # | alpha   | alpha_~  | T (~C)    | F C                  | Mesmo ramo           |
+  # +---------+----------+-----------+----------------------+----------------------+
+  # | beta    | beta_^   | F (C & B) | F C  |  F B          | Divide em ramos      |
+  # | beta    | beta_v   | T (C | B) | T C  |  T B          | Divide em ramos      |
+  # | beta    | beta_>>  | T (C >>B) | F C  |  T B          | Divide em ramos      |
+  # | beta(*) | beta_~   | F (~C)    | T C                  | Tratada sem dividir  |
+  # +---------+----------+-----------+----------------------+----------------------+
+
+  # conectivo: Conjunção (AND)
+  if isinstance(f, And):
+    if sinal == "T":
+      # regra alpha_^: todos os filhos ganham sinal "T" no mesmo ramo
+      novas = []
+      for filho in f.children:
+          novas.append(FormulaMarcada("T", filho))
+      return "alpha_^", "alpha", novas
+
+    else:
+        # regra beta_^: cada filho ganha sinal "F" em um ramo separado
+        novas = []
+        for filho in f.children:
+            novas.append(FormulaMarcada("F", filho))
+        return "beta_^", "beta", novas
+  
+  # conectivo: Disjunção (OR)
+  elif isinstance(f, Or):
+      if sinal == "F":
+        # regra alpha_v: todos os filhos ganham sinal "F" no mesmo ramo
+        novas = []
+        for filho in f.children:
+            novas.append(FormulaMarcada("F", filho))
+        return "alpha_v", "alpha", novas
+
+      else:
+        # regra beta_v: todos os filhos ganham sinal "T" em ramos separados
+        novas = []
+        for filho in f.children:
+            novas.append(FormulaMarcada("T", filho))
+        return "beta_v", "beta", novas
+
+  # conectivo: Implicação (=>)
+  elif isinstance(f, Implies):
+    if sinal == "F":
+      # regra alpha_>>: o primeiro filho recebe o sinal "T" e o segundo recebe o sinal "F"
+      novas = []
+      novas.append(FormulaMarcada("T", f.children[0]))
+      novas.append(FormulaMarcada("F", f.children[1]))
+      return "alpha_>>", "alpha", novas
+
+    else:
+      # regra beta_>>: o primeiro filho recebe o sinal "F" e o segundo recebe o sinal "T"
+      novas = []
+      novas.append(FormulaMarcada("F", f.children[0]))
+      novas.append(FormulaMarcada("T", f.children[1]))
+      return "beta_>>", "beta", novas
+
+  # conectivo: Negação (~)
+  elif isinstance(f, Not):
+    if sinal == "T":
+      # regra alpha_~: o primeiro filho recebe "F"
+      novas = []
+      novas.append(FormulaMarcada("F", f.children[0]))
+      return "alpha_~", "alpha", novas
+
+    else:
+      # regra beta_~: o segundo filho recebe "T"
+      # OBS: irei considerar essa regra como regra alfa para diminuir as bifurcações (evitar multiplicações de ramos sem necessidades)
+      novas = []
+      novas.append(FormulaMarcada("T", f.children[0]))
+      return "beta_~", "alpha", novas
+
+  else:
+      raise ValueError(f"Fórmula não suportada para expansão: {fm}")
+
+# TEST ===================================================
+
+# P, Q, R = vars("P", "Q", "R")
+
+# casos_teste = [
+#     FormulaMarcada("F", P >> Q),      # esperado: alpha_>>, alpha -> T P, F Q
+#     FormulaMarcada("T", P >> Q),      # esperado: beta_>>,  beta  -> F P | T Q
+#     FormulaMarcada("F", P & Q & R),   # esperado: beta_^,   beta  -> F P | F Q | F R
+#     FormulaMarcada("F", ~P),          # esperado: beta_~,   alpha -> T P
+# ]
+
+# for fm in casos_teste:
+#     regra, tipo, novas = expandir_formula(fm)
+#     print(f"Fórmula: {fm}  -->  Regra: {regra} | Tipo: {tipo}")
+
+#     for n in novas:
+#         print(f"    -> {n}")
+
+# ========================================================
+
 
 
