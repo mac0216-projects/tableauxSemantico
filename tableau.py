@@ -42,7 +42,7 @@ class Ramo:
     self.atomos = {}
     self.fechado = False
 
-  def adicionar (self, fm):
+  def adicionar (self, fm: FormulaMarcada):
     if (self.fechado): return
     valor = (fm.sinal == "T")
 
@@ -110,7 +110,7 @@ class Ramo:
 # ========================================================
 
 
-def expandir_formula(fm):
+def expandir_formula(fm: FormulaMarcada) -> tuple[str, str, list[FormulaMarcada]]:
   sinal = fm.sinal
   f = fm.formula
 
@@ -213,6 +213,41 @@ def expandir_formula(fm):
 #     for n in novas:
 #         print(f"    -> {n}")
 
+# ========================================================
+
+def escolher_formula (ramo: Ramo) -> FormulaMarcada:
+  # procura a primeira formula alpha não expandida
+  for i in range(len(ramo.nao_expandidas)):
+    fm = ramo.nao_expandidas[i]
+    regra, tipo, novas = expandir_formula(fm)
+
+    if tipo == "alpha":
+        removida = ramo.nao_expandidas.pop(i)
+        ramo.expandidas.append(removida)
+
+        return removida
+    
+  # se não tem nenhuma alpha, pegar a primeira beta
+  removida = ramo.nao_expandidas.pop(0)
+  ramo.expandidas.append(removida)
+  return removida
+
+# TEST ===================================================
+
+# P, Q, R = vars("P", "Q", "R")
+
+# r = Ramo()
+
+# f1 = FormulaMarcada("T", P >> Q) # regra beta
+# f2 = FormulaMarcada("F", Q >> R) # regra alfa
+
+# r.adicionar(f1)
+# r.adicionar(f2)
+
+# f_escolhida = escolher_formula(r)
+# print("a escolhida deve ser regra alfa: ", f_escolhida)
+# print("deve haver 1 não expandida (a formula beta): ", len(r.nao_expandidas))
+    
 # ========================================================
 
 
