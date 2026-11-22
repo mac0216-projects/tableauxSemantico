@@ -39,23 +39,26 @@ class FormulaMarcada:
 
 
 class Ramo:
-    def __init__(self):
+    def __init__(self, id_ramo: str = "1"):
+        self.id_ramo = id_ramo
         self.nao_expandidas = []
         self.expandidas = []
         self.atomos = {}
         self.fechado = False
+        self.motivo_fechamento = ""
 
     def adicionar(self, fm: FormulaMarcada):
         if self.fechado:
             return
         valor = fm.sinal == "T"
 
-        # caso 1 fm.formula é uma constante (True ou False)
+        # caso 1 - fm.formula é uma constante (True ou False)
         if isinstance(fm.formula, Constant):
             contradicao = fm.formula.value != valor
 
             if contradicao:
                 self.fechado = True
+                self.motivo_fechamento = f"constante {fm.formula.value} com sinal {fm.sinal}"
 
         # caso 2 - fm.formula é uma variable (atomo)
         elif isinstance(fm.formula, Variable):
@@ -64,6 +67,10 @@ class Ramo:
             if nome in self.atomos:
                 if self.atomos[nome] != valor:
                     self.fechado = True
+                    sinal_antigo = "T" if self.atomos[nome] else "F"
+                    self.motivo_fechamento = (
+                        f"contradição em {nome} ({sinal_antigo} {nome} e {fm.sinal} {nome})"
+                    )
 
             else:
                 self.atomos[nome] = valor
@@ -78,12 +85,13 @@ class Ramo:
             if not ja_existe_formula:
                 self.nao_expandidas.append(fm)
 
-    def clonar(self):
-        novo_ramo = Ramo()
+    def clonar(self, sufixo: str = ""):
+        novo_ramo = Ramo(id_ramo=f"{self.id_ramo}{sufixo}")
         novo_ramo.atomos = self.atomos.copy()
         novo_ramo.expandidas = self.expandidas.copy()
         novo_ramo.nao_expandidas = self.nao_expandidas.copy()
         novo_ramo.fechado = self.fechado
+        novo_ramo.motivo_fechamento = self.motivo_fechamento
 
         return novo_ramo
 
@@ -266,24 +274,43 @@ def escolher_formula(ramo: Ramo) -> FormulaMarcada:
 
 def provar_sequente(
     argumento: ArgumentForm,
+    exibir_passos: bool = False,
+    arquivo_txt: str | None = None,
 ) -> tuple[bool, dict[str, bool] | None, list[tuple[str, str]]]:
 
-    ramo_inicial = Ramo()
+    traco = [f"=== Sequente: {argumento} ===", "Ramo 1 (inicial):"]
+    ramo_inicial = Ramo(id_ramo="1")
 
     # montando o ramo inicial com todas as premissas "T" e a conclusão "F"
     for premissa in argumento.premises:
-        ramo_inicial.adicionar(FormulaMarcada("T", premissa))
+        fm = FormulaMarcada("T", premissa)
+        ramo_inicial.adicionar(fm)
+        traco.append(f"  + {fm}")
 
-    ramo_inicial.adicionar(FormulaMarcada("F", argumento.conclusion))
+    fm_conc = FormulaMarcada("F", argumento.conclusion)
+    ramo_inicial.adicionar(fm_conc)
+    traco.append(f"  + {fm_conc}")
+
+    if ramo_inicial.fechado:
+        traco.append(f"  [X] Ramo 1 fechou na inicialização ({ramo_inicial.motivo_fechamento})")
 
     pilha = [ramo_inicial]
     historico = []
+    passo = 1
 
-    # interar enquanto há ramos abertos
+    def finalizar_saida():
+        texto = "\n".join(traco) + "\n\n"
+        if exibir_passos:
+            print(texto)
+        if arquivo_txt:
+            with open(arquivo_txt, "a", encoding="utf-8") as arq:
+                arq.write(texto)
+
+    # iterar enquanto há ramos abertos
     while len(pilha) > 0:
         ramo_atual = pilha.pop()
 
-        # se o ramo já está fechado, pasa para o proximo
+        # se o ramo já está fechado, passa para o proximo
         if ramo_atual.fechado:
             continue
 
@@ -294,7 +321,11 @@ def provar_sequente(
             for atomo in argumento.variables():
                 if atomo not in contraexemplo:
                     contraexemplo[atomo] = False
-            
+
+            traco.append(
+                f"[Ramo {ramo_atual.id_ramo}] SATURADO E ABERTO -> Contra-exemplo: {contraexemplo}"
+            )
+            finalizar_saida()
             return False, contraexemplo, historico
 
         # se está aberto e tem como expandir, segue para a proxima formula (alfa antes de beta)
@@ -303,21 +334,45 @@ def provar_sequente(
         historico.append((regra, str(fm)))
 
         if tipo == "alpha":
+            traco.append(
+                f"Passo {passo} [Ramo {ramo_atual.id_ramo}]: {regra} em ({fm}) -> {[str(n) for n in novas]}"
+            )
             for nova in novas:
                 ramo_atual.adicionar(nova)
 
-            if not ramo_atual.fechado:
+            if ramo_atual.fechado:
+                traco.append(
+                    f"  [X] Ramo {ramo_atual.id_ramo} FECHOU ({ramo_atual.motivo_fechamento})"
+                )
+            else:
                 pilha.append(ramo_atual)
 
         else:
-            for nova in novas:
-                copia = ramo_atual.clonar()
+            traco.append(
+                f"Passo {passo} [Ramo {ramo_atual.id_ramo}]: {regra} em ({fm}) -> BIFURCA:"
+            )
+            sub_ramos = []
+            for idx, nova in enumerate(novas, start=1):
+                copia = ramo_atual.clonar(sufixo=f".{idx}")
                 copia.adicionar(nova)
 
-                if not copia.fechado:
-                    pilha.append(copia)
+                if copia.fechado:
+                    traco.append(
+                        f"  -> Ramo {copia.id_ramo} recebe ({nova}) -> [X] FECHADO ({copia.motivo_fechamento})"
+                    )
+                else:
+                    traco.append(f"  -> Ramo {copia.id_ramo} recebe ({nova}) -> [ABERTO]")
+                    sub_ramos.append(copia)
 
-    # se a pilha esvaziou sem nenhum ramo aberto saturao, logo todos os ramos fecharam, portanto, é valido
+            # empilha invertido para explorar o primeiro sub-ramo antes na busca em profundidade
+            for copia in reversed(sub_ramos):
+                pilha.append(copia)
+
+        passo += 1
+
+    # se a pilha esvaziou sem nenhum ramo aberto saturado, todos os ramos fecharam, portanto é valido
+    traco.append("Resultado: VÁLIDO (todos os ramos fecharam)")
+    finalizar_saida()
     return True, None, historico
 
 
