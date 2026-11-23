@@ -9,3 +9,7 @@ test:
 
 clean:
 	@rm -rf $(find src/ -type d -name "__pycache__")
+
+#-------------------------------------------------------------------------------
+tablo:
+	@PYTHONPATH=src python main.py
