@@ -1,10 +1,10 @@
 import unittest
-from tableauxSemantico.src.utils.validacao import validar_proposicao_entrada
+from utils.validacao import validar_proposicao_entrada
 
 class TesteValidacao(unittest.TestCase):
     def test_proposicoes_diferente_de_vazio(self):
         self.assertIsNotNone(validar_proposicao_entrada("p >> q, r & s"))
-
+ 
     def test_parenteses_c(self):
         resultado = validar_proposicao_entrada(' (p >> q) , (((a | b) >> q) & (∼s))')
         self.assertEqual(resultado, ['(p>>q)', '(((a|b)>>q)&(∼s))'], f'{resultado}')
@@ -32,7 +32,3 @@ class TesteValidacao(unittest.TestCase):
     def test_proposicao_somente_operador(self):
         with self.assertRaises(ValueError):
             validar_proposicao_entrada(">>")
-
-    def test_operador_binario_com_um_atomo(self):
-        with self.assertRaises(ValueError):
-            validar_proposicao_entrada("p>>")

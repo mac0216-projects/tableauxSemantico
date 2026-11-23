@@ -1,9 +1,10 @@
-from tableauxSemantico.src.classes.proposicao import TABLEAUX_OPERADORES
+from classes.operador import TABLEAUX_OPERADORES
 
-OPERADORES_DE_PARSING = [*TABLEAUX_OPERADORES, '|-']
+TABLEAUX_CACTERES_PERMITIDOS = ['(', ')', ',']
 
 def validar_proposicao_entrada(stringEntrada: str):
     proposicoes = stringEntrada.replace(' ', '').split(',')
+    listaOperadores = [operador.value for operador in TABLEAUX_OPERADORES]
 
     for proposicao in proposicoes:
         match True:
@@ -14,11 +15,9 @@ def validar_proposicao_entrada(stringEntrada: str):
                 raise ValueError(f'{proposicoes.index(proposicao) + 1}ª não possui parênteses completos')
 
             case _ if (
-                (len(proposicao) == 1 and not proposicao.isalpha()) or
-                proposicao in OPERADORES_DE_PARSING
+                proposicao in listaOperadores or
+                (len(proposicao) == 1 and not proposicao.isalpha())
             ):
                 raise ValueError(f'{proposicoes.index(proposicao) + 1}ª Proposição é inválida')
-
-            
 
     return proposicoes
