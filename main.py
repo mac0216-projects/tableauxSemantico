@@ -33,7 +33,8 @@ def ler_formula(texto: str) -> Proposition:
 
 def modo_interativo():
     print("=== Provador de Teoremas por Tableaux Semânticos ===")
-    print("Conectivos: ~ (não), & (e), | (ou), >> (implica)")
+    print("Conectivos: ~ (não), & (e), | (ou), >> (implica), << (implicado por), .iff() (bi-implicação)")
+    print("Exemplos: (P >> Q) & (~R)  |  P.iff(Q)  |  Q << P")
     print("Átomos: 1 letra (exceto T e F, que representam True e False)")
     print("Digite 'sair' a qualquer momento para encerrar.\n")
 
