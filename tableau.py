@@ -133,19 +133,23 @@ def expandir_formula(fm: FormulaMarcada) -> tuple[str, str, list[FormulaMarcada]
     f = fm.formula
 
     # regras de expansçao do tableaux:
-    # +---------+----------+-----------+----------------------+----------------------+
-    # | Grupo   | Regra    | Fórmula   | Resultado            | Efeito no tableau    |
-    # +---------+----------+-----------+----------------------+----------------------+
-    # | alpha   | alpha_^  | T (C & B) | T C, T B             | Mesmo ramo           |
-    # | alpha   | alpha_v  | F (C | B) | F C, F B             | Mesmo ramo           |
-    # | alpha   | alpha_>> | F (C >>B) | T C, F B             | Mesmo ramo           |
-    # | alpha   | alpha_~  | T (~C)    | F C                  | Mesmo ramo           |
-    # +---------+----------+-----------+----------------------+----------------------+
-    # | beta    | beta_^   | F (C & B) | F C  |  F B          | Divide em ramos      |
-    # | beta    | beta_v   | T (C | B) | T C  |  T B          | Divide em ramos      |
-    # | beta    | beta_>>  | T (C >>B) | F C  |  T B          | Divide em ramos      |
-    # | beta(*) | beta_~   | F (~C)    | T C                  | Tratada sem dividir  |
-    # +---------+----------+-----------+----------------------+----------------------+
+    # +---------+-----------+------------+----------------------+----------------------+
+    # | Grupo   | Regra     | Fórmula    | Resultado            | Efeito no tableau    |
+    # +---------+-----------+------------+----------------------+----------------------+
+    # | alpha   | alpha_^   | T (C & B)  | T C, T B             | Mesmo ramo           |
+    # | alpha   | alpha_v   | F (C | B)  | F C, F B             | Mesmo ramo           |
+    # | alpha   | alpha_>>  | F (C >> B) | T C, F B             | Mesmo ramo           |
+    # | alpha   | alpha_<<  | F (C << B) | T B, F C             | Mesmo ramo           |
+    # | alpha   | alpha_<=> | T (C<=>B)  | T(C>>B), T(B>>C)     | Mesmo ramo           |
+    # | alpha   | alpha_~   | T (~C)     | F C                  | Mesmo ramo           |
+    # +---------+-----------+------------+----------------------+----------------------+
+    # | beta    | beta_^    | F (C & B)  | F C  |  F B          | Divide em ramos      |
+    # | beta    | beta_v    | T (C | B)  | T C  |  T B          | Divide em ramos      |
+    # | beta    | beta_>>   | T (C >> B) | F C  |  T B          | Divide em ramos      |
+    # | beta    | beta_<<   | T (C << B) | F B  |  T C          | Divide em ramos      |
+    # | beta    | beta_<=>  | F (C<=>B)  | F(C>>B) | F(B>>C)    | Divide em ramos      |
+    # | beta(*) | beta_~    | F (~C)     | T C                  | Tratada sem dividir  |
+    # +---------+-----------+------------+----------------------+----------------------+
 
     # conectivo: Conjunção (AND)
     if isinstance(f, And):
@@ -210,6 +214,41 @@ def expandir_formula(fm: FormulaMarcada) -> tuple[str, str, list[FormulaMarcada]
             novas.append(FormulaMarcada("T", f.children[0]))
             return "beta_~", "alpha", novas
 
+    # conectivo: Implicação reversa (<<) - equivalente a B => C
+    elif isinstance(f, ImpliedBy):
+        if sinal == "F":
+            # regra alpha_<<: o segundo filho recebe "T" e o primeiro recebe "F"
+            novas = []
+            novas.append(FormulaMarcada("T", f.children[1]))
+            novas.append(FormulaMarcada("F", f.children[0]))
+            return "alpha_<<", "alpha", novas
+
+        else:
+            # regra beta_<<: o segundo filho recebe "F" e o primeiro recebe "T"
+            novas = []
+            novas.append(FormulaMarcada("F", f.children[1]))
+            novas.append(FormulaMarcada("T", f.children[0]))
+            return "beta_<<", "beta", novas
+
+    # conectivo: Bi-implicação (<=>) - equivalente a (C => B) ^ (B => C)
+    elif isinstance(f, Iff):
+        imp1 = f.children[0] >> f.children[1]
+        imp2 = f.children[1] >> f.children[0]
+
+        if sinal == "T":
+            # regra alpha_<=>: ambas as implicações recebem "T" no mesmo ramo
+            novas = []
+            novas.append(FormulaMarcada("T", imp1))
+            novas.append(FormulaMarcada("T", imp2))
+            return "alpha_<=>", "alpha", novas
+
+        else:
+            # regra beta_<=>: cada implicação recebe "F" em um ramo separado
+            novas = []
+            novas.append(FormulaMarcada("F", imp1))
+            novas.append(FormulaMarcada("F", imp2))
+            return "beta_<=>", "beta", novas
+        
     else:
         raise ValueError(f"Fórmula não suportada para expansão: {fm}")
 

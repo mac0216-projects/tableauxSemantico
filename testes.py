@@ -84,6 +84,17 @@ atomo_livre = ArgumentForm(P | Q, conclusion=R)
 # Apenas átomos, sem conectivos (válido — histórico vazio [])
 apenas_atomos = ArgumentForm(P, conclusion=P)
 
+# ==========================================================
+# GRUPO 4: Bi-implicação (Iff) e Implicação reversa (ImpliedBy)
+# ==========================================================
+implicacao_reversa = ArgumentForm(Q << P, P, conclusion=Q)
+
+# Lei de De Morgan com bi-implicação (Exercício 4c da p. 48 do livro)
+bi_implicacao_demorgan = ArgumentForm(conclusion=(~(P | Q)).iff(~P & ~Q))
+
+# Bi-implicação inválida (contraexemplo esperado: P=T, Q=F ou P=F, Q=T)
+bi_implicacao_invalida = ArgumentForm(conclusion=P.iff(Q))
+
 testes = [
     ("Grupo 1 - modus_ponens", modus_ponens),
     ("Grupo 1 - modus_tollens", modus_tollens),
@@ -104,11 +115,15 @@ testes = [
     ("Grupo 3 - Premissas repetidas", premissas_repetidas),
     ("Grupo 3 - Átomo livre no contraexemplo", atomo_livre),
     ("Grupo 3 - Apenas átomos", apenas_atomos),
+    ("Grupo 4 - Implicação reversa", implicacao_reversa),
+    ("Grupo 4 - Bi-implicação De Morgan", bi_implicacao_demorgan),
+    ("Grupo 4 - Bi-implicação inválida", bi_implicacao_invalida),
 ]
 
 print("GRUPO 1: Exemplos do arquivo code_base_EP1_demo.py")
 print("GRUPO 2: Fórmulas ricas, aninhadas e operadores n-ários")
-print("GRUPO 3: Casos de borda\n")
+print("GRUPO 3: Casos de borda")
+print("GRUPO 4: Bi-implicação (Iff) e Implicação reversa (ImpliedBy)\n")
 
 for titulo, arg in testes:
     rodar_test(f"{titulo} | {arg}", arg)
