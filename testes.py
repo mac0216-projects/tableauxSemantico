@@ -31,7 +31,7 @@ modus_tollens = ArgumentForm(P >> Q, ~Q, conclusion=~P)
 
 disjunctive_syllogism = ArgumentForm(P | Q, ~P, conclusion=Q)  
 
-hypothetical_syllogism = ArgumentForm(P >> Q, Q >> R, conclusion=R)  
+hypothetical_syllogism = ArgumentForm(P >> Q, Q >> R, conclusion=P >> R)  
 
 non_sequitur = ArgumentForm(P, conclusion=Q)  
 
