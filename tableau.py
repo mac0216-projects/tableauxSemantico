@@ -274,6 +274,11 @@ def expandir_formula(fm: FormulaMarcada) -> tuple[str, str, list[FormulaMarcada]
 # ========================================================
 
 
+def tamanho_formula(f: Proposition) -> int:
+    # conta o total de nós (conectivos + átomos) da fórmula
+    return 1 + sum(tamanho_formula(filho) for filho in f.children)
+
+
 def escolher_formula(ramo: Ramo) -> FormulaMarcada:
     # procura a primeira formula alpha não expandida
     for i in range(len(ramo.nao_expandidas)):
@@ -286,8 +291,17 @@ def escolher_formula(ramo: Ramo) -> FormulaMarcada:
 
             return removida
 
-    # se não tem nenhuma alpha, pegar a primeira beta
-    removida = ramo.nao_expandidas.pop(0)
+    # se não tem nenhuma alpha, pega a formula beta de menor tamanho
+    indice_menor = 0
+    menor_tam = tamanho_formula(ramo.nao_expandidas[0].formula)
+
+    for i in range(1, len(ramo.nao_expandidas)):
+        tam_atual = tamanho_formula(ramo.nao_expandidas[i].formula)
+        if tam_atual < menor_tam:
+            menor_tam = tam_atual
+            indice_menor = i
+
+    removida = ramo.nao_expandidas.pop(indice_menor)
     ramo.expandidas.append(removida)
     return removida
 
