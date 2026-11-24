@@ -214,7 +214,7 @@ def expandir_formula(fm: FormulaMarcada) -> tuple[str, str, list[FormulaMarcada]
             novas.append(FormulaMarcada("T", f.children[0]))
             return "beta_~", "alpha", novas
 
-    # conectivo: Implicação reversa (<<) - equivalente a B => C
+    # conectivo: Implicação reversa (<<) - C << B equivale a B => C (inverte a ordem dos filhos)
     elif isinstance(f, ImpliedBy):
         if sinal == "F":
             # regra alpha_<<: o segundo filho recebe "T" e o primeiro recebe "F"
@@ -230,7 +230,7 @@ def expandir_formula(fm: FormulaMarcada) -> tuple[str, str, list[FormulaMarcada]
             novas.append(FormulaMarcada("T", f.children[0]))
             return "beta_<<", "beta", novas
 
-    # conectivo: Bi-implicação (<=>) - equivalente a (C => B) ^ (B => C)
+    # conectivo: Bi-implicação (<=>) - C <=> B equivale à conjunção (C => B) & (B => C)
     elif isinstance(f, Iff):
         imp1 = f.children[0] >> f.children[1]
         imp2 = f.children[1] >> f.children[0]
@@ -292,6 +292,7 @@ def escolher_formula(ramo: Ramo) -> FormulaMarcada:
             return removida
 
     # se não tem nenhuma alpha, pega a formula beta de menor tamanho
+    # heurística: fórmulas menores geram literais mais rápido, aumentando a chance de fechar o ramo cedo
     indice_menor = 0
     menor_tam = tamanho_formula(ramo.nao_expandidas[0].formula)
 
@@ -359,7 +360,7 @@ def provar_sequente(
             with open(arquivo_txt, "a", encoding="utf-8") as arq:
                 arq.write(texto)
 
-    # iterar enquanto há ramos abertos
+    # iterar enquanto há ramos abertos (busca em profundidade usando pilha LIFO)
     while len(pilha) > 0:
         ramo_atual = pilha.pop()
 
@@ -371,6 +372,7 @@ def provar_sequente(
         if ramo_atual.esta_saturada():
             contraexemplo = ramo_atual.atomos.copy()
 
+            # átomos do sequente que não apareceram no ramo aberto são livres; recebem False por padrão
             for atomo in argumento.variables():
                 if atomo not in contraexemplo:
                     contraexemplo[atomo] = False

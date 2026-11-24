@@ -10,7 +10,8 @@ def ler_formula(texto: str) -> Proposition:
     if not texto:
         raise ValueError("Fórmula vazia.")
 
-    # ambiente seguro: apenas átomos, constantes e conectivos da base
+    # ambiente seguro: bloqueia funções nativas do Python (__builtins__) no eval,
+    # liberando apenas átomos (1 letra), constantes e conectivos da base
     ambiente = {
         "__builtins__": None,
         "T": Constant(True),
@@ -33,7 +34,7 @@ def ler_formula(texto: str) -> Proposition:
 
 
 def separar_premissas(texto: str) -> list[str]:
-    # separa por vírgula apenas fora de parênteses
+    # separa as premissas por vírgula apenas no nível 0 (fora de parênteses)
     partes = []
     atual = []
     nivel = 0
@@ -132,7 +133,7 @@ def modo_arquivo(caminho: str):
 
 
 def modo_terminal():
-    print("\nConectivos: ~ (não), & (e), | (ou), >> (implica), << (implicado por), <=> (bi-implicação)")
+    print("\nConectivos: ~ (não), & (e), | (ou), >> (implica), << (implicado por), .iff() (bi-implicação)")
     print("Átomos: 1 letra (exceto T e F, que representam True e False)")
     print("Digite 'sair' a qualquer momento para encerrar.\n")
 
